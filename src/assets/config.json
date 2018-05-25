@@ -1,9 +1,9 @@
-export const config = {
+ {
     "ebaysandbox": {
       "client_id": "SixBitSo-Stockie-SBX-a090fc79c-80a504d9",
       "secret": "SBX-090fc79c23cb-451f-4990-ba40-6bbc",
       "callback": "/users/handle_ebay_callback",
-      "redirect_uri": "SixBit_Software-SixBitSo-Stocki-tisrjyffd",
+      "ru_name": "SixBit_Software-SixBitSo-Stocki-tisrjyffd",
       "authorize_url": "https://auth.sandbox.ebay.com/oauth2/authorize",
       "access_url": "https://api.sandbox.ebay.com/identity/v1/oauth2/token",
       "scope": ["https://api.ebay.com/oauth/api_scope",
@@ -28,7 +28,7 @@ export const config = {
       "client_id": "Stockie-Stockie-PRD-80902ebf9-464b59b7",
       "secret": "PRD-0902ebf9b663-5a3f-4495-bc70-8b27",
       "callback": "/users/handle_ebay_callback",
-      "redirect_uri": "Stockie-Stockie-Stockie-jcpwi",
+      "ru_name": "Stockie-Stockie-Stockie-jcpwi",
       "authorize_url": "https://auth.ebay.com/oauth2/authorize",
       "access_url": "https://api.ebay.com/identity/v1/oauth2/token",
       "scope": ["https://api.ebay.com/oauth/api_scope",
