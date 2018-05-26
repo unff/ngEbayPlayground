@@ -32,12 +32,15 @@ export class EbayService {
   }
 
   loadSandboxConfig() {
-    this._http.get('config.json')
+    this._http.get('assets/config.json')
               .subscribe((config: any) => {
                 this.oAuthClientId = config.ebaysandbox.client_id
                 this.oAuthSecret = config.ebaysandbox.secret
                 this.oAuthCallback = config.ebaysandbox.callback
                 this.oAuthRuName = config.ebaysandbox.ru_name
+                this.oAuthAuthorizeUrl = config.ebaysandbox.authorize_url
+                this.oAuthAccessUrl = config.ebaysandbox.access_url
+                this.oAuthScope = config.ebaysandbox.scope
               })
   }
 
