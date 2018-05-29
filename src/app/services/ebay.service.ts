@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnInit } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators'
@@ -29,7 +29,9 @@ export class EbayService {
 
   private config: any
 
-  constructor(private _http: HttpClient, private _windows: WindowService) {
+  constructor(private _http: HttpClient, private _windows: WindowService) {}
+
+  ngOnInit() {
     this.config = this._http.get('assets/config.json')
     if (this.isSandBox) {
       this.loadSandboxConfig()
