@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { map } from "rxjs/operators";
+import {AuthService} from "./services/auth.service";
 
 @Component({
   selector: 'app-root',
@@ -7,5 +7,18 @@ import { map } from "rxjs/operators";
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-  title = 'app';
+  constructor(private authService: AuthService) {}
+
+  get authenticated() {
+    return this.authService.isAuthenticated();
+  }
+
+  doLogin() {
+    this.authService.doLogin();
+  }
+
+  doLogout() {
+    this.authService.doLogout();
+}
+
 }
