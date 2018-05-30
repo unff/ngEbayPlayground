@@ -11,5 +11,4 @@ refreshToken:
 
 httpInterceptor here?  or in another service?
 
-Hey the auth window isn't closing, and it's serving up a URL that I dont think it should.
-
+why are all URLs getting processed and pushed to appComponent?

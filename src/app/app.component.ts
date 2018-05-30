@@ -7,6 +7,7 @@ import {EbayService} from "./services/ebay.service";
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
+  title="App works"
   constructor(private authService: EbayService) {}
 
   get authenticated() {
@@ -14,11 +15,14 @@ export class AppComponent {
   }
 
   doLogin() {
-    this.authService.getAccessToken();
+    this.authService.getAuthToken();
   }
 
   doLogout() {
     this.authService.doLogout();
-}
+  }
+  getAccessToken() {
+    return this.authService.accessToken
+  }
 
 }
