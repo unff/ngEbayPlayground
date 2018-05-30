@@ -214,6 +214,7 @@ export class EbayService {
         if (typeof str !== 'string') {
             return {};
         }
+        console.log('str: '+str)
         str = str.trim().replace(/^(\?|#|&)/, ''); // If the string starts with one of these three chars (?#&), remove it.
 
         if (!str) {
