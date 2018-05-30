@@ -1,4 +1,4 @@
-import { Injectable, OnInit, EventEmitter } from '@angular/core';
+import { Injectable, EventEmitter } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators'
@@ -34,38 +34,52 @@ export class EbayService {
   private config: any
   private locationWatcher = new EventEmitter();  // @TODO: switch to RxJS Subject instead of EventEmitter
   
-  constructor(private _http: HttpClient, private _windows: WindowService) {}
-
-  ngOnInit() {
+  constructor(private _http: HttpClient, private _windows: WindowService) {
     this.config = this._http.get('assets/config.json')
+    //console.log('config: ')
+    //console.log(this.config)
     if (this.isSandBox) {
+      //console.log('loadSandboxConfig')
       this.loadSandboxConfig()
     } else {
       this.loadProductionConfig()
     }
   }
 
+
   public loadSandboxConfig() {
-    this.config
-      .subscribe((config: any) => {
+    console.log('sandbox')
+    //console.log(this.config)
+    
+    this.config.subscribe((config: any)=> {
+        //console.log('hello')
+        //console.log(config)
         this.oAuthClientId = config.ebaysandbox.client_id
         this.oAuthSecret = config.ebaysandbox.secret
         this.oAuthCallback = config.ebaysandbox.callback
         this.oAuthRuName = config.ebaysandbox.ru_name
         
         this.oAuthAccessUrl = config.ebaysandbox.access_url
-        this.oAuthScope = encodeURIComponent(
+        this.oAuthScope = 
                             config.ebaysandbox.scope
-                            .reduce((acc, val)=> acc+val+' ', '&scope=')
-                            .trim()
-                          )
+                            .reduce((acc, val)=> acc+' '+val)
+                            // .trim()
+        //console.log('before')
+        //console.log(this.oAuthScope)
+        this.oAuthScope = encodeURIComponent(this.oAuthScope)
         this.oAuthAuthorizeUrl = config.ebaysandbox.authorize_url
           +"?client_id="+config.ebaysandbox.client_id
-          +"&response_tyle=code"
-          +"redirect_uri="+config.ebaysandbox.ru_name
-          +this.oAuthScope
-      })
-      .unsubscribe()
+          +"&response_type=code"
+          +"&redirect_uri="+config.ebaysandbox.ru_name
+          +"&scope="+this.oAuthScope
+          //console.log('scope: '+this.oAuthScope)
+          //console.log('aUrl: '+this.oAuthAuthorizeUrl)
+
+      },
+      error => console.log('error',error),
+      () => console.log('completed')
+    )
+      // .unsubscribe()
     // Check for valid refresh token
     // Check for valid access token
   }
@@ -86,9 +100,10 @@ export class EbayService {
         )
         this.oAuthAuthorizeUrl = config.ebay.authorize_url
           +"?client_id="+config.ebay.client_id
-          +"&response_tyle=code"
-          +"redirect_uri="+config.ebay.ru_name
+          +"&response_type=code"
+          +"&redirect_uri="+config.ebay.ru_name
           +this.oAuthScope
+          //console.log('insub: '+this.oAuthAuthorizeUrl)
       })
       .unsubscribe()
     // Check for valid refresh token
@@ -96,9 +111,10 @@ export class EbayService {
   }
 
   public getAccessToken() {
+    //console.log(this.oAuthAuthorizeUrl)
     var loopCount = this.loopCount;
     this.windowHandle = this._windows.createWindow(this.oAuthAuthorizeUrl, 'OAuth2 Login');
-
+      //console.log(this.windowHandle)
     this.intervalId = setInterval(() => {
       if (loopCount-- < 0) {
         clearInterval(this.intervalId);
@@ -110,7 +126,7 @@ export class EbayService {
         try { 
           href = this.windowHandle.location.href;  // this will error out with a cross-origin DOMException error until the redirect brings us back to localhost:3000
         } catch (e) {
-          //console.log('Error:', e); // output the cross-origin error if you want to see it in the browser console
+          console.log('Error:', e); // output the cross-origin error if you want to see it in the browser console
         }
         if (href != null) {
           var re = /code=(.*)/; // looks for the words "code=" in the href of the auth window
