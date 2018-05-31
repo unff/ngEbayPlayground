@@ -15,7 +15,7 @@ export class AppComponent {
   }
 
   doLogin() {
-    this.authService.getAuthToken();
+    this.authService.getTokens();
   }
 
   doLogout() {

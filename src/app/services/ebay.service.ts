@@ -16,11 +16,20 @@ export class EbayService {
   private oAuthAuthorizeUrl: string
   private oAuthAccessUrl: string
   private oAuthScope: string
+  private timeURL: string
+  private sandboxTimeURL: string
+  private timeOffset: number // offset between eBayTime and systemTime in ms
 
   private isSandBox: boolean = true
   @LocalStorage() public accessToken: string
-  @LocalStorage() public sandboxAccessToken: string
+  @LocalStorage() public refreshToken: string
+  @LocalStorage() public accessTokenExpiration: number
+  @LocalStorage() public refreshTokenExpiration: number
+  //@LocalStorage() public sandboxAccessToken: string
+  //@LocalStorage() public sandboxRefreshToken: string
   private token: string
+  private accessTokenSeconds: number
+  private refreshTokenSeconds: number
 
   private authenticated: boolean = false
   private expires: any = 0
@@ -32,26 +41,31 @@ export class EbayService {
   private intervalLength = 100
 
   private config: any
+  private officialEbayTime: any
   private ebayTokens: any
   private locationWatcher = new EventEmitter();  // @TODO: switch to RxJS Subject instead of EventEmitter
-  
+
   constructor(private _http: HttpClient, private _windows: WindowService) {
     this.config = this._http.get('assets/config.json')
-    //console.log('config: ')
-    //console.log(this.config)
     if (this.isSandBox) {
       //console.log('loadSandboxConfig')
       this.loadSandboxConfig()
     } else {
       this.loadProductionConfig()
     }
+    
+  }
+
+  private calculateExpiration(totalSeconds: number, type?:string) {
+    // add totalSeconds to now(), return type (date, timestamp) default timestamp
+    // do I need a time skew from localTime to eBayTime?
+    
   }
 
 
   public loadSandboxConfig() {
     console.log('sandbox')
     //console.log(this.config)
-    
     this.config.subscribe((config: any)=> {
         //console.log('hello')
         //console.log(config)
@@ -75,7 +89,6 @@ export class EbayService {
           +"&scope="+this.oAuthScope
           //console.log('scope: '+this.oAuthScope)
           //console.log('aUrl: '+this.oAuthAuthorizeUrl)
-
       },
       error => console.log('error',error),
       () => console.log('completed')
@@ -105,24 +118,22 @@ export class EbayService {
           +"&redirect_uri="+config.ebay.ru_name
           +this.oAuthScope
           //console.log('insub: '+this.oAuthAuthorizeUrl)
+        this.timeURL = config.ebaysandbox.time_url+this.oAuthClientId
       })
-      .unsubscribe()
+      
     // Check for valid refresh token
     // Check for valid access token
   }
 
-  public getAuthToken() {
-    //console.log(this.oAuthAuthorizeUrl)
+  public getTokens() {
     var loopCount = this.loopCount;
     this.windowHandle = this._windows.createWindow(this.oAuthAuthorizeUrl, 'OAuth2 Login');
-      //console.log(this.windowHandle)
     this.intervalId = setInterval(() => {
       if (loopCount-- < 0) {
         clearInterval(this.intervalId);
         this.emitAuthStatus(false);
         this.windowHandle.close();
       } else {
-        //console.log(this.windowHandle.location.href)
         var href: string;
         try { 
           href = this.windowHandle.location.href;  // this will error out with a cross-origin DOMException error until the redirect brings us back to localhost:3000
@@ -136,16 +147,8 @@ export class EbayService {
             console.log("Callback URL:", href);
             clearInterval(this.intervalId);
             var parsed = this.parse(href.substr(this.oAuthCallback.length + 1));
-
-            var expiresSeconds = Number(parsed.expires_in) || 1800;
-
             this.token = parsed.code;
             if (this.token) {
-              this.authenticated = true;
-              this.startExpiresTimer(expiresSeconds);
-              this.expires = new Date();
-              this.expires = this.expires.setSeconds(this.expires.getSeconds() + expiresSeconds);
-
               this.windowHandle.close();
               // Get access token and refresh token
               var encodedToken: string = btoa(this.oAuthClientId+":"+this.oAuthSecret)
@@ -153,16 +156,22 @@ export class EbayService {
               var headers = new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')
                                              .set('Authorization', 'Basic '+encodedToken)
                                              //.set('Access-Control-Allow-Origin','*')
+              // I hate CORS so much some times. Hack around it with a CORS proxy.
               this._http.post("https://cors-anywhere.herokuapp.com/"+this.oAuthAccessUrl,body,{headers: headers})
                 .subscribe(res => {
                   this.ebayTokens = res
-                  console.log("res: ")
-                  console.log(res)
+                  this.accessToken = res['access_token']
+                  this.refreshToken = res['refresh_token']
+                  this.accessTokenSeconds = res['expires_in']
+                  this.refreshTokenSeconds = res['refresh_token_expires_in']
+                  // this.accessTokenExpiration = res['a']
+                  this.authenticated = true;
+                  this.startExpiresTimer(this.accessTokenSeconds);
+                  this.expires = new Date().getTime()+(this.accessTokenSeconds*1000);
+                  this.refreshTokenExpiration = new Date().getTime()+(this.refreshTokenSeconds*1000)
+                  
                 })
-              // this._http.get('https://api.github.com/users/seeschweiler').subscribe(data => {
-              //   console.log(data);
-              // });
-              console.log(this.ebayTokens)
+
 
               this.emitAuthStatus(true);
                 
@@ -186,69 +195,8 @@ export class EbayService {
     }, this.intervalLength);
   }
 
-  public getUserTokens() {
-    var loopCount = this.loopCount;
-    this.windowHandle = this._windows.createWindow(this.oAuthAuthorizeUrl, 'OAuth2 Login');
-    this.intervalId = setInterval(() => {
-      if (loopCount-- < 0) {
-        clearInterval(this.intervalId);
-        this.windowHandle.close();
-      } else {
-        var href: string;
-        try { 
-          href = this.windowHandle.location.href;  // this will error out with a cross-origin DOMException error until the redirect brings us back to localhost:3000
-        } catch (e) {
-          //console.log('Error:', e); // output the cross-origin error if you want to see it in the browser console
-        }
-        if (href != null) {
-          var re = /code=(.*)/; // looks for the words "code=" in the href of the auth window
-          var found = href.match(re);
-          if (found) {
-            console.log("Callback URL:", href);
-            clearInterval(this.intervalId);
-            var parsed = this.parse(href.substr(this.oAuthCallback.length + 1));
+  public refreshAccessToken() {
 
-            var expiresSeconds = Number(parsed.expires_in) || 1800;
-
-            this.token = parsed.code;
-            if (this.token) {
-              this.authenticated = true;
-              this.startExpiresTimer(expiresSeconds);
-              this.expires = new Date();
-              this.expires = this.expires.setSeconds(this.expires.getSeconds() + expiresSeconds);
-
-              this.windowHandle.close();
-              // Get access token and refresh token
-              var encodedToken: string = btoa(this.oAuthClientId+":"+this.oAuthSecret)
-              var body = "grant_type=authorization_code&code="+this.token+"&redirect_uri="+this.oAuthRuName
-              var headers = new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')
-                                             .set('Authorization', 'Basic '+encodedToken)
-              this._http.post(this.oAuthAccessUrl,body,{headers: headers})
-                .subscribe(res => {
-                  this.ebayTokens = res
-                })
-              console.log(this.ebayTokens)
-
-              this.emitAuthStatus(true);
-                
-            } else {
-              console.log('false')
-              this.authenticated = false; // we got the login callback just fine, but there was no token
-              this.emitAuthStatus(false); // so we are still going to fail the login
-            }
-
-          } else {
-            // http://localhost:3000/auth/callback#error=access_denied
-            if (href.indexOf(this.oAuthCallback) == 0) {
-              clearInterval(this.intervalId);
-              var parsed = this.parse(href.substr(this.oAuthCallback.length + 1));
-              this.windowHandle.close();
-              this.emitAuthStatusError(false, parsed);
-            }
-          }
-        }
-      }
-    }, this.intervalLength);
   }
 
   private startExpiresTimer(seconds: number) {

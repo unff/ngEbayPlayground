@@ -1,3 +1,15 @@
+Two indicators in the top bar:
+- AccessToken is still good
+- Refresh token is still good
+
+Persist session across tabs (check for access/refresh token in localStorage)
+hook into firebase for call history / tokens?
+Check ebayofficialtime and generate time offset on startup.
+
+
+
+
+
 ebay service
 
 onInit:
@@ -11,4 +23,6 @@ refreshToken:
 
 httpInterceptor here?  or in another service?
 
-why are all URLs getting processed and pushed to appComponent?
+why are all URLs getting processed and pushed to appComponent? -- no routes defined
+
+

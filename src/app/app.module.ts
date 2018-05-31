@@ -5,13 +5,17 @@ import { WebStorageModule } from 'ngx-store';
 import {EbayService} from "./services/ebay.service";
 import {WindowService} from "./services/window.service";
 
+// import {  } from 'ngx-bootstrap'
+
 //import {Jsonp, Response} from '@angular/http';
 
 import { AppComponent } from './app.component';
+import { SidenavComponent } from './sidenav/sidenav.component';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    SidenavComponent
   ],
   imports: [
     BrowserModule,
