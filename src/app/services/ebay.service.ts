@@ -152,10 +152,12 @@ export class EbayService {
               var body = "grant_type=authorization_code&code="+this.token+"&redirect_uri="+this.oAuthRuName
               var headers = new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')
                                              .set('Authorization', 'Basic '+encodedToken)
-                                             .set('Access-Control-Allow-Origin','*')
-              this._http.post(this.oAuthAccessUrl,body,{headers: headers})
+                                             //.set('Access-Control-Allow-Origin','*')
+              this._http.post("https://cors-anywhere.herokuapp.com/"+this.oAuthAccessUrl,body,{headers: headers})
                 .subscribe(res => {
                   this.ebayTokens = res
+                  console.log("res: ")
+                  console.log(res)
                 })
               // this._http.get('https://api.github.com/users/seeschweiler').subscribe(data => {
               //   console.log(data);
