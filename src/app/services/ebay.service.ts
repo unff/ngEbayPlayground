@@ -16,24 +16,31 @@ export class EbayService {
   private oAuthAuthorizeUrl: string
   private oAuthAccessUrl: string
   private oAuthScope: string
-  private timeURL: string
-  private sandboxTimeURL: string
-  private timeOffset: number // offset between eBayTime and systemTime in ms
+  // private timeURL: string
+  // private sandboxTimeURL: string
+  // private timeOffset: number // offset between eBayTime and systemTime in ms
 
-  private isSandBox: boolean = true
+  @LocalStorage() public isSandBox: boolean
+  // swap these over to get/set
   @LocalStorage() public accessToken: string
   @LocalStorage() public refreshToken: string
-  @LocalStorage() public accessTokenExpiration: number
-  @LocalStorage() public refreshTokenExpiration: number
+  @LocalStorage() public accessTokenExpiration: Date
+  @LocalStorage() public refreshTokenExpiration: Date
+  // Should these be private?
   //@LocalStorage() public sandboxAccessToken: string
   //@LocalStorage() public sandboxRefreshToken: string
+  //@LocalStorage() public productionAccessToken: string
+  //@LocalStorage() public productionRefreshToken: string
+  //@LocalStorage() public sandboxAccessTokenExp: Date
+  //@LocalStorage() public sandboxRefreshTokenExp: Date
+  //@LocalStorage() public productionAccessTokenExp: Date
+  //@LocalStorage() public productionRefreshTokenExp: Date
   private token: string
   private accessTokenSeconds: number
   private refreshTokenSeconds: number
 
   private authenticated: boolean = false
-  private expires: any = 0
-  private userInfo: any = {}
+  // private userInfo: any = {}
   private windowHandle: any = null
   private intervalId: any = null
   private expiresTimerId: any = null
@@ -41,11 +48,16 @@ export class EbayService {
   private intervalLength = 100
 
   private config: any
-  private officialEbayTime: any
+  // private officialEbayTime: any
   private ebayTokens: any
   private locationWatcher = new EventEmitter();  // @TODO: switch to RxJS Subject instead of EventEmitter
 
   constructor(private _http: HttpClient, private _windows: WindowService) {
+    console.info(this.isSandBox)
+    if (this.isSandBox == null) {
+      console.log('isSandBox defaulting to true')
+      this.isSandBox = true
+    }
     this.config = this._http.get('assets/config.json')
     if (this.isSandBox) {
       //console.log('loadSandboxConfig')
@@ -75,10 +87,9 @@ export class EbayService {
         this.oAuthRuName = config.ebaysandbox.ru_name
         
         this.oAuthAccessUrl = config.ebaysandbox.access_url
-        this.oAuthScope = 
-                            config.ebaysandbox.scope
-                            .reduce((acc, val)=> acc+' '+val)
-                            // .trim()
+        this.oAuthScope = config.ebaysandbox.scope
+                          .reduce((acc, val)=> acc+' '+val)
+                          // .trim()
         //console.log('before')
         //console.log(this.oAuthScope)
         this.oAuthScope = encodeURIComponent(this.oAuthScope)
@@ -118,7 +129,7 @@ export class EbayService {
           +"&redirect_uri="+config.ebay.ru_name
           +this.oAuthScope
           //console.log('insub: '+this.oAuthAuthorizeUrl)
-        this.timeURL = config.ebaysandbox.time_url+this.oAuthClientId
+        // this.timeURL = config.ebaysandbox.time_url+this.oAuthClientId
       })
       
     // Check for valid refresh token
@@ -167,9 +178,8 @@ export class EbayService {
                   // this.accessTokenExpiration = res['a']
                   this.authenticated = true;
                   this.startExpiresTimer(this.accessTokenSeconds);
-                  this.expires = new Date().getTime()+(this.accessTokenSeconds*1000);
-                  this.refreshTokenExpiration = new Date().getTime()+(this.refreshTokenSeconds*1000)
-                  
+                  this.refreshTokenExpiration = new Date(Date.now()+(this.refreshTokenSeconds*1000))
+                  this.accessTokenExpiration = new Date(Date.now()+(this.accessTokenSeconds*1000))
                 })
 
 
@@ -213,7 +223,7 @@ export class EbayService {
   public doLogout() {
     this.authenticated = false;
     this.expiresTimerId = null;
-    this.expires = 0;
+    this.accessTokenSeconds = 0;
     this.token = null;
     this.emitAuthStatus(true);
     console.log('Session has been cleared');
@@ -237,7 +247,8 @@ export class EbayService {
               success: success,
               authenticated: this.authenticated,
               token: this.token,
-              expires: this.expires,
+              refreshTokenExpires: this.refreshTokenExpiration,
+              acessTokenExpires: this.accessTokenExpiration,
               error: error
           }
       );

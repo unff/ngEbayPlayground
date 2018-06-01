@@ -5,6 +5,11 @@ Two indicators in the top bar:
 Persist session across tabs (check for access/refresh token in localStorage)
 hook into firebase for call history / tokens?
 Check ebayofficialtime and generate time offset on startup.
+Ability to swap from sandbox to production via a click
+- set/get functions to return tokens based on isSandBox
+- two buttons in navbar, active one glows but is disabled
+Ability to swap from US to UK to AU with a selection
+
 
 
 
@@ -12,10 +17,14 @@ Check ebayofficialtime and generate time offset on startup.
 
 ebay service
 
-onInit:
-- check localStorage for access token
-- Y: get refresh token
-- N: get access token, get refresh token, store in localStorage
+onInit: (NOPE, not in a service)
+constructor:
+- check localStorage for refresh token expiration > new Date()
+- Y: get access token, set isAuthorized = true
+- N: set isAuthorized = false
+
+on sandbox/prod swap:
+- check for 
 
 refreshToken:
 - get refresh token from eBay
