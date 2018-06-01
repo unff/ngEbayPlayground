@@ -4,11 +4,17 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators'
 import { WindowService } from './window.service';
 import { CookieStorage, LocalStorage, SessionStorage } from 'ngx-store';
+import { Config } from '../config'
 
 @Injectable({
   providedIn: 'root'
 })
 export class EbayService {
+
+  private productionConfig: Config
+  private sandboxConfig: Config
+
+
   private oAuthClientId: string
   private oAuthSecret: string
   private oAuthCallback: string
@@ -81,22 +87,22 @@ export class EbayService {
     this.config.subscribe((config: any)=> {
         //console.log('hello')
         //console.log(config)
-        this.oAuthClientId = config.ebaysandbox.client_id
+        this.oAuthClientId = config.ebaysandbox.clientId
         this.oAuthSecret = config.ebaysandbox.secret
         this.oAuthCallback = config.ebaysandbox.callback
-        this.oAuthRuName = config.ebaysandbox.ru_name
+        this.oAuthRuName = config.ebaysandbox.ruName
         
-        this.oAuthAccessUrl = config.ebaysandbox.access_url
+        this.oAuthAccessUrl = config.ebaysandbox.accessUrl
         this.oAuthScope = config.ebaysandbox.scope
                           .reduce((acc, val)=> acc+' '+val)
                           // .trim()
         //console.log('before')
         //console.log(this.oAuthScope)
         this.oAuthScope = encodeURIComponent(this.oAuthScope)
-        this.oAuthAuthorizeUrl = config.ebaysandbox.authorize_url
-          +"?client_id="+config.ebaysandbox.client_id
+        this.oAuthAuthorizeUrl = config.ebaysandbox.authorizeUrl
+          +"?client_id="+config.ebaysandbox.clientId
           +"&response_type=code"
-          +"&redirect_uri="+config.ebaysandbox.ru_name
+          +"&redirect_uri="+config.ebaysandbox.ruName
           +"&scope="+this.oAuthScope
           //console.log('scope: '+this.oAuthScope)
           //console.log('aUrl: '+this.oAuthAuthorizeUrl)
@@ -109,24 +115,28 @@ export class EbayService {
     // Check for valid access token
   }
 
+  private loadConfigs() {
+
+  }
+
   public loadProductionConfig() {
     this.config
       .subscribe((config: any) => {
-        this.oAuthClientId = config.ebay.client_id
+        this.oAuthClientId = config.ebay.clientId
         this.oAuthSecret = config.ebay.secret
         this.oAuthCallback = config.ebay.callback
-        this.oAuthRuName = config.ebay.ru_name
+        this.oAuthRuName = config.ebay.ruName
         
-        this.oAuthAccessUrl = config.ebay.access_url
+        this.oAuthAccessUrl = config.ebay.accessUrl
         this.oAuthScope = encodeURIComponent(
           config.ebay.scope
           .reduce((acc, val)=> acc+val+' ', '&scope=')
           .trim()
         )
-        this.oAuthAuthorizeUrl = config.ebay.authorize_url
-          +"?client_id="+config.ebay.client_id
+        this.oAuthAuthorizeUrl = config.ebay.authorizeUrl
+          +"?client_id="+config.ebay.clientId
           +"&response_type=code"
-          +"&redirect_uri="+config.ebay.ru_name
+          +"&redirect_uri="+config.ebay.ruName
           +this.oAuthScope
           //console.log('insub: '+this.oAuthAuthorizeUrl)
         // this.timeURL = config.ebaysandbox.time_url+this.oAuthClientId
