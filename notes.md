@@ -4,9 +4,9 @@ Two indicators in the top bar:
 
 Persist session across tabs (check for access/refresh token in localStorage)
 hook into firebase for call history / tokens?
-Check ebayofficialtime and generate time offset on startup.
+NOPE (http only call): Check ebayofficialtime and generate time offset on startup. 
 Ability to swap from sandbox to production via a click
-- set/get functions to return tokens based on isSandBox
+- DONE: set/get functions to return tokens based on isSandBox
 - two buttons in navbar, active one glows but is disabled
 Ability to swap from US to UK to AU with a selection
 

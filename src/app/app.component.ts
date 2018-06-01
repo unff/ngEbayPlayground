@@ -14,6 +14,8 @@ export class AppComponent {
     return this.authService.isAuthenticated();
   }
 
+
+
   doLogin() {
     this.authService.getTokens();
   }
@@ -24,5 +26,17 @@ export class AppComponent {
   getAccessToken() {
     return this.authService.accessToken
   }
+  getAccessSeconds() {
+
+  }
+  getRefreshToken() {
+    return this.authService.refreshToken
+  }
+
+  getSite() {
+    return this.authService.isSandbox?'sandbox':'production'
+  }
+
+  d(d:Date){return new Date(d)}
 
 }

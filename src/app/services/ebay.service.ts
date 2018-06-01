@@ -13,34 +13,95 @@ export class EbayService {
 
   private productionConfig: Config
   private sandboxConfig: Config
+  //public runningConfig: Config
 
+  public get runningConfig(): Config {
+    return this.isSandbox? this.sandboxConfig : this.productionConfig
+  }
+  // public set runningConfig(c: Config) {
+  //   if(this.isSandbox) {
+  //     this.sandboxConfig = c
+  //   } else {
+  //     this.productionConfig = c
+  //   }
+  // }
 
-  private oAuthClientId: string
-  private oAuthSecret: string
-  private oAuthCallback: string
-  private oAuthRuName: string
-  private oAuthAuthorizeUrl: string
-  private oAuthAccessUrl: string
-  private oAuthScope: string
+  // private oAuthClientId: string
+  // private oAuthSecret: string
+  // private oAuthCallback: string
+  // private oAuthRuName: string
+  // private oAuthAuthorizeUrl: string
+  // private oAuthAccessUrl: string
+  // private oAuthScope: string
   // private timeURL: string
   // private sandboxTimeURL: string
   // private timeOffset: number // offset between eBayTime and systemTime in ms
 
-  @LocalStorage() public isSandBox: boolean
-  // swap these over to get/set
-  @LocalStorage() public accessToken: string
-  @LocalStorage() public refreshToken: string
-  @LocalStorage() public accessTokenExpiration: Date
-  @LocalStorage() public refreshTokenExpiration: Date
-  // Should these be private?
-  //@LocalStorage() public sandboxAccessToken: string
-  //@LocalStorage() public sandboxRefreshToken: string
-  //@LocalStorage() public productionAccessToken: string
-  //@LocalStorage() public productionRefreshToken: string
-  //@LocalStorage() public sandboxAccessTokenExp: Date
-  //@LocalStorage() public sandboxRefreshTokenExp: Date
-  //@LocalStorage() public productionAccessTokenExp: Date
-  //@LocalStorage() public productionRefreshTokenExp: Date
+  @LocalStorage() private _isSandbox: boolean
+  public get isSandbox() {
+    return this._isSandbox
+  }
+  public set isSandbox(b: boolean) {
+    console.info('isSandbox set to: '+b.toString())
+    this._isSandbox = b
+  }
+
+
+  // getters and setters for tokens and expirations
+  public get accessToken(): string {
+    return this.isSandbox? this._sandboxAccessToken : this._productionAccessToken
+  }
+  public set accessToken(token: string) {
+    if(this.isSandbox) {
+      this._sandboxAccessToken = token
+    } else {
+      this._productionAccessToken = token
+    }
+  }
+
+  public get refreshToken(): string {
+    return this.isSandbox? this._sandboxRefreshToken : this._productionRefreshToken
+  }
+  public set refreshToken(token: string) {
+    if(this.isSandbox) {
+      this._sandboxRefreshToken = token
+    } else {
+      this._productionRefreshToken = token
+    }
+  }
+
+  public get accessTokenExp(): Date {
+    return this.isSandbox? this._sandboxAccessTokenExp : this._productionAccessTokenExp
+  }
+  public set accessTokenExp(d: Date) {
+    if(this.isSandbox) {
+      this._sandboxAccessTokenExp = d
+    } else {
+      this._productionAccessTokenExp = d
+    }
+  }
+
+  public get refreshTokenExp(): Date {
+    return this.isSandbox? this._sandboxRefreshTokenExp : this._productionRefreshTokenExp
+  }
+  public set refreshTokenExp(d: Date) {
+    if(this.isSandbox) {
+      this._sandboxRefreshTokenExp = d
+    } else {
+      this._productionRefreshTokenExp = d
+    }
+  }
+
+  @LocalStorage() private _sandboxAccessToken: string
+  @LocalStorage() private _sandboxRefreshToken: string
+  @LocalStorage() private _sandboxAccessTokenExp: Date
+  @LocalStorage() private _sandboxRefreshTokenExp: Date
+  
+  @LocalStorage() private _productionAccessToken: string
+  @LocalStorage() private _productionRefreshToken: string
+  @LocalStorage() private _productionAccessTokenExp: Date
+  @LocalStorage() private _productionRefreshTokenExp: Date
+
   private token: string
   private accessTokenSeconds: number
   private refreshTokenSeconds: number
@@ -59,19 +120,28 @@ export class EbayService {
   private locationWatcher = new EventEmitter();  // @TODO: switch to RxJS Subject instead of EventEmitter
 
   constructor(private _http: HttpClient, private _windows: WindowService) {
-    console.info(this.isSandBox)
-    if (this.isSandBox == null) {
+    console.info(this.isSandbox)
+    if (this.isSandbox == null) {
       console.log('isSandBox defaulting to true')
-      this.isSandBox = true
+      //first run (null variable) defaults to Sandbox
+      this.isSandbox = true
+    } else {
+      // weeeeird @LocalStorage issue where var doesnt recister a value on until set?.  WTF.
+     this.isSandbox = this.isSandbox
     }
     this.config = this._http.get('assets/config.json')
-    if (this.isSandBox) {
-      //console.log('loadSandboxConfig')
-      this.loadSandboxConfig()
-    } else {
-      this.loadProductionConfig()
-    }
-    
+      .subscribe((res: any) => {
+        this.productionConfig = res.ebay
+        this.sandboxConfig = res.ebaysandbox
+        
+      })
+  }
+
+  public swapEnv() {
+    console.info(this.isSandbox)
+    this.isSandbox = !this.isSandbox
+    console.log('ding')
+    console.info(this.isSandbox)
   }
 
   private calculateExpiration(totalSeconds: number, type?:string) {
@@ -80,75 +150,59 @@ export class EbayService {
     
   }
 
-
-  public loadSandboxConfig() {
-    console.log('sandbox')
-    //console.log(this.config)
-    this.config.subscribe((config: any)=> {
-        //console.log('hello')
-        //console.log(config)
-        this.oAuthClientId = config.ebaysandbox.clientId
-        this.oAuthSecret = config.ebaysandbox.secret
-        this.oAuthCallback = config.ebaysandbox.callback
-        this.oAuthRuName = config.ebaysandbox.ruName
-        
-        this.oAuthAccessUrl = config.ebaysandbox.accessUrl
-        this.oAuthScope = config.ebaysandbox.scope
-                          .reduce((acc, val)=> acc+' '+val)
-                          // .trim()
-        //console.log('before')
-        //console.log(this.oAuthScope)
-        this.oAuthScope = encodeURIComponent(this.oAuthScope)
-        this.oAuthAuthorizeUrl = config.ebaysandbox.authorizeUrl
-          +"?client_id="+config.ebaysandbox.clientId
+  private fullAuthUrl() {
+    let scope = encodeURIComponent(
+              this.runningConfig.scope
+              .reduce((acc, val)=> acc+' '+val)
+              //.trim()
+            )
+    return  this.runningConfig.authorizeUrl
+          +"?client_id="+this.runningConfig.clientId
           +"&response_type=code"
-          +"&redirect_uri="+config.ebaysandbox.ruName
-          +"&scope="+this.oAuthScope
-          //console.log('scope: '+this.oAuthScope)
-          //console.log('aUrl: '+this.oAuthAuthorizeUrl)
-      },
-      error => console.log('error',error),
-      () => console.log('completed')
-    )
-      // .unsubscribe()
-    // Check for valid refresh token
-    // Check for valid access token
+          +"&redirect_uri="+this.runningConfig.ruName
+          +"&scope="+scope
   }
-
-  private loadConfigs() {
-
-  }
-
-  public loadProductionConfig() {
-    this.config
-      .subscribe((config: any) => {
-        this.oAuthClientId = config.ebay.clientId
-        this.oAuthSecret = config.ebay.secret
-        this.oAuthCallback = config.ebay.callback
-        this.oAuthRuName = config.ebay.ruName
+  
+  // public loadSandboxConfig() {
+  //   console.log('sandbox')
+  //   //console.log(this.config)
+  //   this.config.subscribe((config: any)=> {
+  //       //console.log('hello')
+  //       //console.log(config)
+  //       this.oAuthClientId = config.ebaysandbox.clientId
+  //       this.oAuthSecret = config.ebaysandbox.secret
+  //       this.oAuthCallback = config.ebaysandbox.callback
+  //       this.oAuthRuName = config.ebaysandbox.ruName
         
-        this.oAuthAccessUrl = config.ebay.accessUrl
-        this.oAuthScope = encodeURIComponent(
-          config.ebay.scope
-          .reduce((acc, val)=> acc+val+' ', '&scope=')
-          .trim()
-        )
-        this.oAuthAuthorizeUrl = config.ebay.authorizeUrl
-          +"?client_id="+config.ebay.clientId
-          +"&response_type=code"
-          +"&redirect_uri="+config.ebay.ruName
-          +this.oAuthScope
-          //console.log('insub: '+this.oAuthAuthorizeUrl)
-        // this.timeURL = config.ebaysandbox.time_url+this.oAuthClientId
-      })
-      
-    // Check for valid refresh token
-    // Check for valid access token
-  }
+  //       this.oAuthAccessUrl = config.ebaysandbox.accessUrl
+  //       this.oAuthScope = config.ebaysandbox.scope
+  //                         .reduce((acc, val)=> acc+' '+val)
+  //                         // .trim()
+  //       //console.log('before')
+  //       //console.log(this.oAuthScope)
+  //       this.oAuthScope = encodeURIComponent(this.oAuthScope)
+  //       this.oAuthAuthorizeUrl = config.ebaysandbox.authorizeUrl
+  //         +"?client_id="+config.ebaysandbox.clientId
+  //         +"&response_type=code"
+  //         +"&redirect_uri="+config.ebaysandbox.ruName
+  //         +"&scope="+this.oAuthScope
+  //         //console.log('scope: '+this.oAuthScope)
+  //         //console.log('aUrl: '+this.oAuthAuthorizeUrl)
+  //     },
+  //     error => console.log('error',error),
+  //     () => console.log('completed')
+  //   )
+  //     // .unsubscribe()
+  //   // Check for valid refresh token
+  //   // Check for valid access token
+  // }
+
+
+  
 
   public getTokens() {
     var loopCount = this.loopCount;
-    this.windowHandle = this._windows.createWindow(this.oAuthAuthorizeUrl, 'OAuth2 Login');
+    this.windowHandle = this._windows.createWindow(this.fullAuthUrl(), 'OAuth2 Login');
     this.intervalId = setInterval(() => {
       if (loopCount-- < 0) {
         clearInterval(this.intervalId);
@@ -159,7 +213,7 @@ export class EbayService {
         try { 
           href = this.windowHandle.location.href;  // this will error out with a cross-origin DOMException error until the redirect brings us back to localhost:3000
         } catch (e) {
-          console.log('Error:', e); // output the cross-origin error if you want to see it in the browser console
+          console.log('Error:', e); // output the cross-origin error if you want to see progress in the browser console
         }
         if (href != null) {
           var re = /code=(.*)/; // looks for the words "code=" in the href of the auth window
@@ -167,18 +221,18 @@ export class EbayService {
           if (found) {
             console.log("Callback URL:", href);
             clearInterval(this.intervalId);
-            var parsed = this.parse(href.substr(this.oAuthCallback.length + 1));
+            var parsed = this.parse(href.substr(this.runningConfig.callback.length + 1));
             this.token = parsed.code;
             if (this.token) {
               this.windowHandle.close();
               // Get access token and refresh token
-              var encodedToken: string = btoa(this.oAuthClientId+":"+this.oAuthSecret)
-              var body = "grant_type=authorization_code&code="+this.token+"&redirect_uri="+this.oAuthRuName
+              var encodedToken: string = btoa(this.runningConfig.clientId+":"+this.runningConfig.secret)
+              var body = "grant_type=authorization_code&code="+this.token+"&redirect_uri="+this.runningConfig.ruName
               var headers = new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')
                                              .set('Authorization', 'Basic '+encodedToken)
                                              //.set('Access-Control-Allow-Origin','*')
               // I hate CORS so much some times. Hack around it with a CORS proxy.
-              this._http.post("https://cors-anywhere.herokuapp.com/"+this.oAuthAccessUrl,body,{headers: headers})
+              this._http.post("https://cors-anywhere.herokuapp.com/"+this.runningConfig.accessUrl,body,{headers: headers})
                 .subscribe(res => {
                   this.ebayTokens = res
                   this.accessToken = res['access_token']
@@ -188,8 +242,8 @@ export class EbayService {
                   // this.accessTokenExpiration = res['a']
                   this.authenticated = true;
                   this.startExpiresTimer(this.accessTokenSeconds);
-                  this.refreshTokenExpiration = new Date(Date.now()+(this.refreshTokenSeconds*1000))
-                  this.accessTokenExpiration = new Date(Date.now()+(this.accessTokenSeconds*1000))
+                  this.refreshTokenExp = new Date(Date.now()+(this.refreshTokenSeconds*1000))
+                  this.accessTokenExp= new Date(Date.now()+(this.accessTokenSeconds*1000))
                 })
 
 
@@ -203,9 +257,9 @@ export class EbayService {
 
           } else {
             // http://localhost:3000/auth/callback#error=access_denied
-            if (href.indexOf(this.oAuthCallback) == 0) {
+            if (href.indexOf(this.runningConfig.callback) == 0) {
               clearInterval(this.intervalId);
-              var parsed = this.parse(href.substr(this.oAuthCallback.length + 1));
+              var parsed = this.parse(href.substr(this.runningConfig.callback.length + 1));
               this.windowHandle.close();
               this.emitAuthStatusError(false, parsed);
             }
@@ -216,7 +270,7 @@ export class EbayService {
   }
 
   public refreshAccessToken() {
-
+    
   }
 
   private startExpiresTimer(seconds: number) {
@@ -257,8 +311,8 @@ export class EbayService {
               success: success,
               authenticated: this.authenticated,
               token: this.token,
-              refreshTokenExpires: this.refreshTokenExpiration,
-              acessTokenExpires: this.accessTokenExpiration,
+              refreshTokenExpires: this.refreshTokenExp,
+              acessTokenExpires: this.accessTokenExp,
               error: error
           }
       );
