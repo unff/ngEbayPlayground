@@ -7,7 +7,8 @@ import {EbayService} from "./services/ebay.service";
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-  title="App works"
+  envModel = this.authService.isSandbox ? 'Sandbox' : 'Production'
+  
   constructor(private authService: EbayService) {}
 
   get authenticated() {

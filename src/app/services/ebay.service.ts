@@ -36,6 +36,16 @@ export class EbayService {
   // private timeURL: string
   // private sandboxTimeURL: string
   // private timeOffset: number // offset between eBayTime and systemTime in ms
+  
+  @LocalStorage() private _sandboxAccessToken: string
+  @LocalStorage() private _sandboxRefreshToken: string
+  @LocalStorage() private _sandboxAccessTokenExp: Date
+  @LocalStorage() private _sandboxRefreshTokenExp: Date
+  
+  @LocalStorage() private _productionAccessToken: string
+  @LocalStorage() private _productionRefreshToken: string
+  @LocalStorage() private _productionAccessTokenExp: Date
+  @LocalStorage() private _productionRefreshTokenExp: Date
 
   @LocalStorage() private _isSandbox: boolean
   public get isSandbox() {
@@ -45,9 +55,20 @@ export class EbayService {
     console.info('isSandbox set to: '+b.toString())
     this._isSandbox = b
   }
-
-
+  
+  
   // getters and setters for tokens and expirations
+  // private _authenticated: boolean
+  public get authenticated(): boolean {
+    // console.log('ref tok exp:')
+    // console.log(new Date(this.refreshTokenExp).getTime())
+    if (this.refreshTokenExp) {
+      return new Date(this.refreshTokenExp).getTime() > new Date().getTime() ? true : false
+    } else {
+      return false
+    }
+  }
+
   public get accessToken(): string {
     return this.isSandbox? this._sandboxAccessToken : this._productionAccessToken
   }
@@ -92,21 +113,11 @@ export class EbayService {
     }
   }
 
-  @LocalStorage() private _sandboxAccessToken: string
-  @LocalStorage() private _sandboxRefreshToken: string
-  @LocalStorage() private _sandboxAccessTokenExp: Date
-  @LocalStorage() private _sandboxRefreshTokenExp: Date
-  
-  @LocalStorage() private _productionAccessToken: string
-  @LocalStorage() private _productionRefreshToken: string
-  @LocalStorage() private _productionAccessTokenExp: Date
-  @LocalStorage() private _productionRefreshTokenExp: Date
 
   private token: string
   private accessTokenSeconds: number
   private refreshTokenSeconds: number
 
-  private authenticated: boolean = false
   // private userInfo: any = {}
   private windowHandle: any = null
   private intervalId: any = null
@@ -129,6 +140,7 @@ export class EbayService {
       // weeeeird @LocalStorage issue where var doesnt recister a value on until set?.  WTF.
      this.isSandbox = this.isSandbox
     }
+
     this.config = this._http.get('assets/config.json')
       .subscribe((res: any) => {
         this.productionConfig = res.ebay
@@ -137,11 +149,15 @@ export class EbayService {
       })
   }
 
-  public swapEnv() {
-    console.info(this.isSandbox)
-    this.isSandbox = !this.isSandbox
-    console.log('ding')
-    console.info(this.isSandbox)
+public toggleEnv() {
+  this.isSandbox = !this.isSandbox
+}
+
+  public swapEnv(b: boolean) {
+    // console.info(this.isSandbox)
+    this.isSandbox = b
+    // console.log('ding')
+    // console.info(this.isSandbox)
   }
 
   private calculateExpiration(totalSeconds: number, type?:string) {
@@ -240,7 +256,6 @@ export class EbayService {
                   this.accessTokenSeconds = res['expires_in']
                   this.refreshTokenSeconds = res['refresh_token_expires_in']
                   // this.accessTokenExpiration = res['a']
-                  this.authenticated = true;
                   this.startExpiresTimer(this.accessTokenSeconds);
                   this.refreshTokenExp = new Date(Date.now()+(this.refreshTokenSeconds*1000))
                   this.accessTokenExp= new Date(Date.now()+(this.accessTokenSeconds*1000))
@@ -251,7 +266,7 @@ export class EbayService {
                 
             } else {
               console.log('false')
-              this.authenticated = false; // we got the login callback just fine, but there was no token
+              //this.authenticated = false; // we got the login callback just fine, but there was no token
               this.emitAuthStatus(false); // so we are still going to fail the login
             }
 
@@ -270,22 +285,23 @@ export class EbayService {
   }
 
   public refreshAccessToken() {
-    
+    // use refresh token to get a new access token
   }
 
   private startExpiresTimer(seconds: number) {
+    seconds -= 30 //give a little leeway
     if (this.expiresTimerId != null) {
       clearTimeout(this.expiresTimerId);
     }
     this.expiresTimerId = setTimeout(() => {
       console.log('Session has expired');
-      this.doLogout();
+      this.refreshAccessToken();
     }, seconds * 1000); // seconds * 1000
     console.log('Token expiration timer set for', seconds, "seconds");
   }
   
   public doLogout() {
-    this.authenticated = false;
+    //this.authenticated = false;
     this.expiresTimerId = null;
     this.accessTokenSeconds = 0;
     this.token = null;
@@ -298,7 +314,8 @@ export class EbayService {
   }
 
   public isAuthenticated() {
-      return this.authenticated;
+    // refresh token good?
+      return this.authenticated
   }
 
   private emitAuthStatus(success: boolean) {
@@ -309,8 +326,7 @@ export class EbayService {
       this.locationWatcher.emit(
           {
               success: success,
-              authenticated: this.authenticated,
-              token: this.token,
+              authenticated: this.isAuthenticated(),
               refreshTokenExpires: this.refreshTokenExp,
               acessTokenExpires: this.accessTokenExp,
               error: error

@@ -10,21 +10,20 @@
         <li class="nav-item active">
           <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
         </li>
-        <!-- <li class="nav-item">
-          <a class="nav-link" href="#">Features</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">Pricing</a>
-        </li> -->
+        
       </ul>
-      <span class="navbar-text">
-        <button *ngIf="!this.authService.isSandbox" (click)="this.authService.swapEnv()" class="nav-link btn btn-danger-outline" href="#">Production</button>
-        <button *ngIf="this.authService.isSandbox" (click)="this.authService.swapEnv()" class="nav-link btn btn-success-outline" href="#">SandBox</button>
-      </span>
-      <span class="navbar-text">
-        <button *ngIf="!authenticated" (click)="doLogin()" class="nav-link btn btn-danger-outline" href="#">Login</button>
-        <button *ngIf="authenticated" (click)="doLogout()" class="nav-link btn btn-success-outline" href="#">Logout {{userName}}</button>
-      </span>
+      <button *ngIf="!authenticated" (click)="doLogin()" class="nav-link btn btn-danger" href="#">Reauth</button>
+      <!-- <button *ngIf="authenticated" (click)="doLogout()" class="nav-link btn btn-success-outline" href="#">Logout</button> -->
+      <div class="btn-group">
+        <button class="nav-link btn" [ngClass]="this.authService.isSandbox ? 'btn-success' : 'btn-outline-success'" 
+          [(ngModel)]="envModel" (click)="this.authService.swapEnv(true)"  
+          btnRadio="Sandbox" [disabled]="this.authService.isSandbox">Sandbox</button>
+        <button class="nav-link btn" [ngClass]="!this.authService.isSandbox ? 'btn-success' : 'btn-outline-success'" 
+          [(ngModel)]="envModel" (click)="this.authService.swapEnv(false)"
+          btnRadio="Production" [disabled]="!this.authService.isSandbox">Production</button>
+      </div>
+      
+      
     </div>
   </nav>
   <div class="container-fluid">

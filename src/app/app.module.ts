@@ -4,6 +4,8 @@ import { NgModule } from '@angular/core';
 import { WebStorageModule } from 'ngx-store';
 import {EbayService} from "./services/ebay.service";
 import {WindowService} from "./services/window.service";
+import { ButtonsModule } from 'ngx-bootstrap/buttons';
+import { FormsModule } from '@angular/forms';
 
 // import {  } from 'ngx-bootstrap'
 
@@ -20,7 +22,9 @@ import { SidenavComponent } from './sidenav/sidenav.component';
   imports: [
     BrowserModule,
     HttpClientModule,
-    WebStorageModule
+    WebStorageModule,
+    FormsModule,
+    ButtonsModule
   ],
   providers: [
     EbayService,
