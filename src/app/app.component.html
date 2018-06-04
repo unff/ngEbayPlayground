@@ -12,14 +12,22 @@
         </li>
         
       </ul>
-      <button *ngIf="!authenticated" (click)="doLogin()" class="nav-link btn btn-danger" href="#">Reauth</button>
+      <div style="padding-right:30px;" class="btn-group">
+        <label class="nav-link btn btn-primary" [(ngModel)]="this.authService.siteModel"
+                btnRadio="EBAY_US" tabindex="0" role="button">EBAY_US</label>
+        <label class="nav-link btn btn-primary" [(ngModel)]="this.authService.siteModel"
+                btnRadio="EBAY_UK" tabindex="0" role="button">EBAY_UK</label>
+        <label class="nav-link btn btn-primary" [(ngModel)]="this.authService.siteModel"
+                btnRadio="EBAY_AU" tabindex="0" role="button">EBAY_AU</label>
+      </div>
+      <button type="button" *ngIf="!authenticated" (click)="doLogin()" class="nav-link btn btn-danger" href="#">Reauth</button>
       <!-- <button *ngIf="authenticated" (click)="doLogout()" class="nav-link btn btn-success-outline" href="#">Logout</button> -->
       <div class="btn-group">
         <button class="nav-link btn" [ngClass]="this.authService.isSandbox ? 'btn-success' : 'btn-outline-success'" 
-          [(ngModel)]="envModel" (click)="this.authService.swapEnv(true)"  
+          [(ngModel)]="envModel" (click)="this.authService.swapEnv(true)" type="button"  
           btnRadio="Sandbox" [disabled]="this.authService.isSandbox">Sandbox</button>
         <button class="nav-link btn" [ngClass]="!this.authService.isSandbox ? 'btn-success' : 'btn-outline-success'" 
-          [(ngModel)]="envModel" (click)="this.authService.swapEnv(false)"
+          [(ngModel)]="envModel" (click)="this.authService.swapEnv(false)" type="button"
           btnRadio="Production" [disabled]="!this.authService.isSandbox">Production</button>
       </div>
       
@@ -30,7 +38,7 @@
     <div class="row">
         <sidenav ></sidenav>
         <div class="col" id="main">
-            <p>Site: {{getSite()}}</p>
+            <p>Site: {{this.authService.siteModel}} {{getSite()}}</p>
             <p style=" word-break:break-word;">Access: {{getAccessToken()}}
             <br />Exp: {{d(this.authService.accessTokenExp)}}</p>
             <p style=" overflow-wrap:break-all;">Refresh: {{getRefreshToken()}}

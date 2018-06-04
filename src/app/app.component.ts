@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnChanges, DoCheck } from '@angular/core';
 import {EbayService} from "./services/ebay.service";
 
 @Component({
@@ -6,7 +6,7 @@ import {EbayService} from "./services/ebay.service";
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent {
+export class AppComponent implements OnInit, DoCheck {
   envModel = this.authService.isSandbox ? 'Sandbox' : 'Production'
   
   constructor(private authService: EbayService) {}
@@ -14,8 +14,16 @@ export class AppComponent {
   get authenticated() {
     return this.authService.isAuthenticated();
   }
+  
+  ngOnInit() {
+    console.log('appComponent onInit')
 
+  }
 
+  ngDoCheck() {
+    console.log('appComponent doCheck ')
+    console.log('configsLoaded: '+this.authService.configsLoaded)
+  }
 
   doLogin() {
     this.authService.getTokens();
