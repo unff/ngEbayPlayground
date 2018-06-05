@@ -2,13 +2,13 @@ Two indicators in the top bar:
 - AccessToken is still good
 - Refresh token is still good
 
-Persist session across tabs (check for access/refresh token in localStorage)
-hook into firebase for call history / tokens?
 NOPE (http only call): Check ebayofficialtime and generate time offset on startup. 
-Ability to swap from sandbox to production via a click
+DONE: Persist session across tabs (check for access/refresh token in localStorage)
+DONE: Ability to swap from sandbox to production via a click
 - DONE: set/get functions to return tokens based on isSandBox
-- two buttons in navbar, active one glows but is disabled
-Ability to swap from US to UK to AU with a selection
+- DONE: two buttons in navbar, active one glows but is disabled
+DONE: Ability to swap from US to UK to AU with a selection
+hook into firebase for call history / tokens?
 
 
 
@@ -24,7 +24,8 @@ constructor:
 - N: set isAuthorized = false
 
 on sandbox/prod swap:
-- check for 
+- check for good access token
+- get new access token if it's bad
 
 refreshToken:
 - get refresh token from eBay

@@ -14,6 +14,7 @@ export class EbayService {
   private productionConfig: Config
   private sandboxConfig: Config
 
+  private corsProxy: string = "https://cors-anywhere.herokuapp.com/"
   public get runningConfig(): Config {
     return this.isSandbox? this.sandboxConfig : this.productionConfig
   }
@@ -55,8 +56,6 @@ export class EbayService {
   // getters and setters for tokens and expirations
   // private _authenticated: boolean
   public get authenticated(): boolean {
-    // console.log('ref tok exp:')
-    // console.log(new Date(this.refreshTokenExp).getTime())
     if (this.refreshTokenExp) {
       return new Date(this.refreshTokenExp).getTime() > new Date().getTime() ? true : false
     } else {
@@ -141,7 +140,6 @@ export class EbayService {
     this.config.subscribe((res: any) => {
       this.productionConfig = res.ebay
       this.sandboxConfig = res.ebaysandbox
-      console.log('got config')
       this.refreshSandboxAccessToken()
       this.refreshProductionAccessToken()
       this.configsLoaded = true
@@ -171,8 +169,6 @@ export class EbayService {
         this.startProductionTimer(Math.floor((new Date(this._productionAccessTokenExp).getTime() - new Date().getTime()) /1000))
       }
     }
-
-    
   }
 
   public toggleEnv() {
@@ -180,15 +176,7 @@ export class EbayService {
   }
 
   public swapEnv(b: boolean) {
-    // console.info(this.isSandbox)
     this.isSandbox = b
-    // console.log('ding')
-    // console.info(this.isSandbox)
-  }
-
-  private calculateExpiration(totalSeconds: number, type?:string) {
-    // add totalSeconds to now(), return type (date, timestamp) default timestamp
-    // do I need a time skew from localTime to eBayTime?
   }
 
   private fullAuthUrl() {
@@ -271,22 +259,20 @@ export class EbayService {
               let body = "grant_type=authorization_code&code="+this.token+"&redirect_uri="+this.runningConfig.ruName
               let headers = new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')
                                              .set('Authorization', 'Basic '+encodedToken)
-                                             //.set('Access-Control-Allow-Origin','*')
+                                            //  .set('Access-Control-Allow-Origin','*')
+                                            //  .set('Access-Control-Allow-Headers','X-Requested-With, Origin, Content-Type, X-Auth-Token')
+                                            //  .set('Access-Control-Allow-Methods','GET, PUT, POST, DELETE')
               // I hate CORS so much some times. Hack around it with a CORS proxy.
-              this._http.post("https://cors-anywhere.herokuapp.com/"+this.runningConfig.accessUrl,body,{headers: headers})
+              this._http.post(this.corsProxy+this.runningConfig.accessUrl,body,{headers: headers})
                 .subscribe(res => {
                   this.ebayTokens = res
                   this.accessToken = res['access_token']
                   this.refreshToken = res['refresh_token']
                   this.accessTokenSeconds = res['expires_in']
                   this.refreshTokenSeconds = res['refresh_token_expires_in']
-                  // this.accessTokenExpiration = res['a']
-                  //this.startExpiresTimer(this.accessTokenSeconds)
                   this.refreshTokenExp = new Date(Date.now()+(this.refreshTokenSeconds*1000))
                   this.accessTokenExp= new Date(Date.now()+(this.accessTokenSeconds*1000))
                 })
-
-
               this.emitAuthStatus(true)
                 
             } else {
@@ -324,9 +310,7 @@ export class EbayService {
     let body = "grant_type=refresh_token&refresh_token="+this._sandboxRefreshToken+"&scope="+scope
     let headers = new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')
                                     .set('Authorization', 'Basic '+encodedToken)
-                                    //.set('Access-Control-Allow-Origin','*')
-    // I hate CORS so much some times. Hack around it with a CORS proxy.
-    this._http.post("https://cors-anywhere.herokuapp.com/"+this.sandboxConfig.accessUrl,body,{headers: headers})
+    this._http.post(this.corsProxy+this.sandboxConfig.accessUrl,body,{headers: headers})
       .subscribe(res => {
         console.log('sandbox token response received')
         console.log(res)
@@ -352,9 +336,7 @@ export class EbayService {
     let body = "grant_type=refresh_token&refresh_token="+this._productionRefreshToken+"&scope="+scope
     let headers = new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded')
                                     .set('Authorization', 'Basic '+encodedToken)
-                                    //.set('Access-Control-Allow-Origin','*')
-    // I hate CORS so much some times. Hack around it with a CORS proxy.
-    this._http.post("https://cors-anywhere.herokuapp.com/"+this.productionConfig.accessUrl,body,{headers: headers})
+    this._http.post(this.corsProxy+this.productionConfig.accessUrl,body,{headers: headers})
       .subscribe(res => {
         console.log('production token response received')
         console.log(res)
@@ -372,7 +354,7 @@ export class EbayService {
     this.sandboxExpiresTimerId = setTimeout(() => {
       console.log('Session has expired')
       this.refreshSandboxAccessToken()
-    }, seconds * 1000); // seconds * 1000
+    }, seconds * 1000);
     console.log('Sandbox token expiration timer set for', seconds, "seconds")
   }
 
@@ -384,12 +366,11 @@ export class EbayService {
     this.productionExpiresTimerId = setTimeout(() => {
       console.log('Session has expired')
       this.refreshProductionAccessToken()
-    }, seconds * 1000); // seconds * 1000
+    }, seconds * 1000); 
     console.log('Production token expiration timer set for', seconds, "seconds")
   }
   
   public doLogout() {
-    //this.authenticated = false
     this.sandboxExpiresTimerId = null
     this.productionExpiresTimerId = null
     this.accessTokenSeconds = 0
